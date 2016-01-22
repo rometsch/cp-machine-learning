@@ -1,18 +1,36 @@
-function [ images ] = loadMNISTnumber( number )
-%LOADMNISTNUMBER Load images of a given number from training set.
-    
-    % Test input.
-    if (number<0) or (number>9)
+function [ images ] = loadMNISTnumber( type, number )
+%LOADMNISTNUMBER Load images of a given number from either test or training set.
+% MNIST data must be in a subfolder called 'MNIST'.
+
+    %% Test input.
+    if (number<0) || (number>9)
         display('Error: Unable to load training set. Choose a number between 0 and 9.');
         return
     end
     
-    % Commands mostly taken from
+    if not(strcmp(type,'train')) && not(strcmp(type,'test'))
+        display('Error: Please pass either test or train as type argument.');
+        return
+    end
+
+    %% Choose set type.
+    if strcmp(type,'train')
+        imagepath = './MNIST/train-images-idx3-ubyte';
+        labelpath = './MNIST/train-labels-idx1-ubyte';
+    end
+    if strcmp(type,'test')
+        imagepath = './MNIST/t10k-images-idx3-ubyte';
+        labelpath = './MNIST/t10k-labels-idx1-ubyte';
+    end
+
+
+    %% Load MNIST test set images.
+    
+    % Commands for binary access of file taken from
     % http://www.machinelearning.ru/wiki/images/e/ee/ReadMNIST.zip and
     % modified for own purpose.
-    %% Load MNIST test set images.
-    filepath = './MNIST/train-images-idx3-ubyte';
-    fid = fopen(filepath,'r','b');      % big-endian
+    
+    fid = fopen(imagepath,'r','b');      % big-endian
     magicNum = fread(fid,1,'int32');
     if(magicNum~=2051)
         display('Error: cant find magic number');
@@ -32,8 +50,8 @@ function [ images ] = loadMNISTnumber( number )
 
     fclose(fid);
     %% Load MNIST test set labels.
-    filepath = './MNIST/train-labels-idx1-ubyte';
-    fid = fopen(filepath,'r','b');      % big-endian
+    
+    fid = fopen(labelpath,'r','b');      % big-endian
     magicNum = fread(fid,1,'int32');
     if(magicNum~=2049)
         display('Error: cant find magic number');
@@ -49,10 +67,12 @@ function [ images ] = loadMNISTnumber( number )
     images = [];
     for n=1:1:imgNum
         if (labels(n)==number)
-            images = [images ; I{n}];
+            images = [images , transpose(I{n})];
         end
     end
-
+    % Cast image vectors to double for later use.
+    images = double(images);
+    
     fclose(fid);
 end
 
