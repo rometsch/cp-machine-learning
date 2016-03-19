@@ -50,7 +50,7 @@ eval1 = eval1(1:ind_lg1);
 
 
 %% Plot eigenvectors and spectrums.
-figure(2), clf, colormap(gray);
+figure(2), clf, colormap(gray); axis('image','off');
 subplot(3,2,1),
 mon = [reshape(Uj(:,1),28,28),reshape(Uj(:,2),28,28);reshape(Uj(:,3),28,28),reshape(Uj(:,4),28,28)];
 imagesc(mon), axis('image','off');
@@ -115,30 +115,34 @@ title('1st eigenvector of covariance matrix of joint data');
 drawnow;
 
 
-%% d) Discriminant values.
+%% d) h) Discriminant values.
 
 mu_Y0 = mean(Y0,2);
 mu_Y1 = mean(Y1,2);
 
-S_Y0 = cov(Y0');
-S_Y1 = cov(Y1');
+% Interpolation between linear and quadratic log likelyhood function.
+% z=0 for quadratic and z=1 for linear.
+
+z=1;
+S_Y0 = z*cov(Y0')+(1-z)*.5*(cov(Y0')+cov(Y1'));
+S_Y1 = z*cov(Y1')+(1-z)*.5*(cov(Y0')+cov(Y1'));
 
 
 % Calculate coefficients for discriminant according to eq (7.15).
 A = S_Y1^(-1) - S_Y0^(-1);
 bT = - (mu_Y1'*S_Y1^(-1) - mu_Y0'*S_Y0^(-1) );
 
-%% TODO: Check which formula is right!
+% TODO: Check which formula is right!
 gamma = mu_Y1'*S_Y1^(-1)*mu_Y1 - mu_Y0'*S_Y0^(-1)*mu_Y0 + sum(log(eval1(1:2))) - sum(log(eval0(1:2)));
 % mu_Y1'*S_Y1^(-1)*mu_Y1 - mu_Y0'*S_Y0^(-1)*mu_Y0 + sum(log(eig(S_Y1)) - sum(log(eig(S_Y0)))
-%%
+%
 d_Y0 = diag(Y0'*A*Y0)'+bT*Y0;
 d_Y1 = diag(Y1'*A*Y1)'+bT*Y1;
 
 %% e) Training error
 
 ntheta = 1000;
-theta = linspace(-80,100,ntheta);
+theta = linspace(-100,100,ntheta);
 % Add up errors from classification with theta.
 e = sum(repmat(d_Y0,ntheta,1) < repmat(theta',1,length(d_Y0)),2);
 e = e + sum(repmat(d_Y1,ntheta,1) > repmat(theta',1,length(d_Y1)),2);
@@ -155,6 +159,7 @@ hold on;
 plot(theta,e,'LineStyle','none','Marker','.');
 xlabel('threshold \theta'), ylabel('0-1 loss');
 set(gca,'yscale','log');
+box on;
 l = ylim;
 plot([theta_best,theta_best],[l(1),l(2)]);
 plot([theta_gauss,theta_gauss],[l(1),l(2)]);
@@ -176,24 +181,29 @@ d_Yt0 = diag(Yt0'*A*Yt0)'+bT*Yt0;
 d_Yt1 = diag(Yt1'*A*Yt1)'+bT*Yt1;
 
 % Plot discriminants.
+edges=linspace(min([d_Y1,d_Yt1]), max([d_Y0,d_Yt0]),100);
+
 figure(5), clf;
 subplot(2,1,1);
 hold on;
-histogram(d_Y0,'DisplayStyle','stairs','Normalization','probability');
-histogram(d_Y1,'DisplayStyle','stairs','Normalization','probability');
+histogram(d_Y0,edges,'DisplayStyle','stairs','Normalization','probability');
+histogram(d_Y1,edges,'DisplayStyle','stairs','Normalization','probability');
 hold off;
 title('discriminant values of training set');
 xlabel('discriminant value'), ylabel('normalized count');
 legend('c=0','c=1');
+box on;
 
 subplot(2,1,2);
 hold on;
-histogram(d_Yt0,'DisplayStyle','stairs','Normalization','probability');
-histogram(d_Yt1,'DisplayStyle','stairs','Normalization','probability');
+histogram(d_Yt0,edges,'DisplayStyle','stairs','Normalization','probability');
+histogram(d_Yt1,edges,'DisplayStyle','stairs','Normalization','probability');
 hold off;
 title('discriminant values of test set');
 xlabel('discriminant value'), ylabel('normalized count');
 legend('c=0','c=1');
+box on;
+
 drawnow;
 
 %% g) Compute 0-1-loss for test data.
@@ -202,3 +212,66 @@ drawnow;
 % Add up errors from classification with theta.
 et = (sum(d_Yt0 < theta_best) + sum(d_Yt1 > theta_best))/(length(d_Yt0)+length(d_Yt1))
 egauss = (sum(d_Yt0 < theta_gauss) + sum(d_Yt1 > theta_gauss))/(length(d_Yt0)+length(d_Yt1))
+
+%% h) Study behavior of errors with change of z.
+% Execute all prior sections to get necessary data.
+
+z_log = linspace(0,1,00);
+e_train = [];
+e_test = [];
+for z = z_log
+    % Interpolation between linear and quadratic log likelyhood function.
+    % z=0 for quadratic and z=1 for linear.
+    S_Y0 = z*cov(Y0')+(1-z)*.5*(cov(Y0')+cov(Y1'));
+    S_Y1 = z*cov(Y1')+(1-z)*.5*(cov(Y0')+cov(Y1'));
+
+    % Calculate coefficients for discriminant according to eq (7.15).
+    A = S_Y1^(-1) - S_Y0^(-1);
+    bT = - (mu_Y1'*S_Y1^(-1) - mu_Y0'*S_Y0^(-1) );
+
+    % TODO: Check which formula is right!
+    gamma = mu_Y1'*S_Y1^(-1)*mu_Y1 - mu_Y0'*S_Y0^(-1)*mu_Y0 + sum(log(eval1(1:2))) - sum(log(eval0(1:2)));
+    % mu_Y1'*S_Y1^(-1)*mu_Y1 - mu_Y0'*S_Y0^(-1)*mu_Y0 + sum(log(eig(S_Y1)) - sum(log(eig(S_Y0)))
+    %
+    d_Y0 = diag(Y0'*A*Y0)'+bT*Y0;
+    d_Y1 = diag(Y1'*A*Y1)'+bT*Y1;
+
+    % Training error
+    ntheta = 1000;
+    theta = linspace(-100,100,ntheta);
+    % Add up errors from classification with theta.
+    e = sum(repmat(d_Y0,ntheta,1) < repmat(theta',1,length(d_Y0)),2);
+    e = e + sum(repmat(d_Y1,ntheta,1) > repmat(theta',1,length(d_Y1)),2);
+    % Normalize by total number of classified items.
+    e = e/(length(d_Y0)+length(d_Y1));
+    [e_min,ind] = min(e);
+    % Log minimal train error.
+    e_train = [e_train, e_min];
+    theta_best = theta(ind);
+    % Calculate optimal theta for gaussian variables using -gamma from eq
+    % (7.15).
+    theta_gauss = -gamma;
+
+    % Compute discriminants.
+    d_Yt0 = diag(Yt0'*A*Yt0)'+bT*Yt0;
+    d_Yt1 = diag(Yt1'*A*Yt1)'+bT*Yt1;
+
+    % Compute 0-1-loss for test data.
+    % Add up errors from classification with theta.
+    et = (sum(d_Yt0 < theta_best) + sum(d_Yt1 > theta_best))/(length(d_Yt0)+length(d_Yt1))
+    e_test = [e_test, et];
+    egauss = (sum(d_Yt0 < theta_gauss) + sum(d_Yt1 > theta_gauss))/(length(d_Yt0)+length(d_Yt1))
+end
+
+
+%% Plot variation of errors with z.
+figure(6), clf;
+hold on;
+semilogy(z_log,e_train,'LineStyle','none','Marker','x');
+semilogy(z_log,e_test,'LineStyle','none','Marker','+');
+hold off;
+legend('trainingerror','testerror','Location','northeast');
+xlabel('z');
+ylabel('0-1 loss');
+box;
+drawnow;

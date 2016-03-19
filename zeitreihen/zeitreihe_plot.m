@@ -7,7 +7,7 @@ zeitreihe
 % run('timeseries.m');
 
 % Plot time series.
-fig = figure;
+fig = figure(1); clf;
 subplot(2,3,[1,2]); box on;
 hold on;
 plot(x,'b');
@@ -52,7 +52,7 @@ wT = [0, 0, 4, 0, -4, 1];
 zeitreihe
 
 % Plot time series.
-fig = figure;
+fig = figure(2); clf;
 subplot(2,3,[1,2]); box on;
 hold on;
 plot(x,'b');

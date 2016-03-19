@@ -3,7 +3,7 @@
 % Number of data points.
 N = 100;
 % Feature vectors.
-% wT = [-4, 0, 0, 4, 0, 0];
+%wT = [-4, 0, 0, 4, 0, 0];  %commend for use of external plotscript
 % Inital conditions.
 x1 = 9./13;
 x2 = 3./7;
